@@ -1,0 +1,19 @@
+{
+  "name": "signature",
+  "version": "1.0.0",
+  "description": "signature-api-microservice",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "jspdf": "^2.5.1",
+    "multer": "^1.4.5-lts.1",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^3.3.122",
+    "pdfkit": "^0.13.0"
+  }
+}
