@@ -1,68 +1,45 @@
 const express = require('express');
+const multer = require('multer');
+const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const app = express();
-const bodyParser = require('body-parser');
-const pdfLib = require('pdf-lib');
-const fs = require('fs');
-
-// middleware to parse JSON and urlencoded data
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-app.get('/', async (req, res) => {
+// configure multer middleware to handle multipart/form-data
+const uploadjpg = multer();app.post('/signature', uploadjpg.fields([{ name: 'pdf', maxCount: 1 }, { name: 'image', maxCount: 1 }]), async (req, res) => {
   try {
-    res.send("SIGNATURE API ENDPOINT")
-  }catch (error) {
-    console.error(error);
-    res.status(500).send('Error merging image into PDF');
-  }
-});
-
-// API endpoint for merging base64 image into PDF
-app.post('/signature', async (req, res) => {
-  try {
-    const base64Image = req.body.base64Image;
-    const pdfFile = req.body.pdfFile;
-
-    // convert base64 image to buffer
-    const imageBuffer = Buffer.from(JSON.stringify(base64Image, 'base64'));
-
-    // write binary data to file
-    fs.writeFileSync('image.png', imageBuffer);
-
-    const imageDataFromFile = fs.readFileSync('image.png');
-
-    // read PDF file as buffer
-    const pdfBuffer = fs.readFileSync(pdfFile);
-
-    // load PDF document
-    const pdfDoc = await pdfLib.PDFDocument.load(pdfBuffer);
-
-    // add image to first page of PDF
-    const image = await pdfDoc.embedPng(imageDataFromFile);
-    const pages = pdfDoc.getPages();
-    const firstPage = pages[0];
-    const { width, height } = firstPage.getSize();
-    firstPage.drawImage(image, {
+    // get the PDF file buffer and base64 image from the request body
+    const pdfBuffer = req.files['pdf'][0].buffer;
+    const base64Image = req.files['image'][0].buffer.toString('base64');
+    // create a new PDF document from the buffer
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    // add a new page to the PDF document
+    const page = pdfDoc.addPage();
+    // load the base64 image into a PDF image
+    const jpgImage = await pdfDoc.embedJpg(Buffer.from(base64Image, 'base64'));
+    // get the width and height of the image
+    const { width, height } = jpgImage.scale(1);
+    // draw the image onto the PDF page
+    page.drawImage(jpgImage, {
       x: 0,
-      y: height - image.height,
-      width: image.width,
-      height: image.height,
+      y: 0,
+      width: width,
+      height: height,
     });
-
-    // save modified PDF to buffer
-    const modifiedPdfBuffer = await pdfDoc.save();
-
-    // send modified PDF as response
+    // get the PDF file buffer with the image added
+    const pdfBytes = await pdfDoc.save();
+    // set the response headers to indicate a PDF file download
     res.setHeader('Content-Type', 'application/pdf');
-    res.send(modifiedPdfBuffer);
+    // send the PDF file buffer as the response
+    res.send(pdfBytes);
   } catch (error) {
     console.error(error);
-    res.status(500).send('Error merging image into PDF');
+    res.status(500).send('Internal Server Error');
   }
 });
 
-// start server
-const port = 3000;
-app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+// for png
+
+// ...
+
+// start the server
+app.listen(3000, () => {
+  console.log('Server started on port 3000');
 });
